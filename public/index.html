@@ -125,6 +125,11 @@
             top: 20px;
             right: 20px;
         }
+        .reset-button-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
     </style>
 </head>
 <body>
@@ -159,6 +164,9 @@
         <button onclick="saveFlashcardSet()">Save</button>
     </div>
     <div id="linkContainer"></div>
+    <div class="reset-button-container">
+        <button onclick="resetFlashcards()">Reset</button>
+    </div>
 </div>
 
 <script>
@@ -190,6 +198,7 @@
         score = 0;
         attemptedQuestions = 0;
         questionsAttemptedSet.clear();
+        localStorage.clear(); // Clear any previous session data
         updateFlashcard();
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
         document.getElementById('prevBtn').disabled = true;
@@ -213,6 +222,12 @@
             const button = document.createElement('button');
             button.innerText = option;
             button.onclick = () => checkAnswer(button, option[0] === answer);
+
+            // Check if this option was previously selected
+            const selectedOption = localStorage.getItem(`flashcard-${currentFlashcardIndex}`);
+            if (selectedOption === option) {
+                button.classList.add('correct');
+            }
             optionsContainer.appendChild(button);
         });
 
@@ -230,6 +245,7 @@
             button.classList.add('correct');
             document.getElementById('flashcard').classList.add('correct');
             score++;
+            localStorage.setItem(`flashcard-${currentFlashcardIndex}`, button.innerText);
             disableOptions();
         } else {
             button.classList.add('incorrect');
@@ -274,7 +290,7 @@
             userId: '1234',
         };
 
-        fetch('/flashcards', { // Changed from http://localhost:5000 to relative path
+        fetch('http://localhost:5000/flashcards', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -286,13 +302,9 @@
             const shareButtonContainer = document.getElementById('saveButtonContainer');
             const linkContainer = document.getElementById('linkContainer');
 
-            // Use dynamic origin for the server URL
-            const serverUrl = window.location.origin;
-            const shareLink = `${serverUrl}/flashcards/view/${data.id}`;
-
             // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${shareLink}')">Share</button>`;
-            // linkContainer.innerHTML = `<p>Your flashcard set is saved! Share this link: <a href="${shareLink}" target="_blank">${shareLink}</a></p>`;
+            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('http://localhost:5000/flashcards/view/${data.id}')">Share</button>`;
+            linkContainer.innerHTML = `<p>Your flashcard set is saved! Share this link: <a href="http://localhost:5000/flashcards/view/${data.id}" target="_blank">http://localhost:5000/flashcards/view/${data.id}</a></p>`;
         })
         .catch(error => {
             console.error('Error saving flashcard set:', error);
@@ -306,8 +318,25 @@
             console.error('Failed to copy link: ', err);
         });
     }
-</script>
 
+    function resetFlashcards() {
+        localStorage.clear();
+        questions = [];
+        answers = [];
+        currentFlashcardIndex = 0;
+        score = 0;
+        attemptedQuestions = 0;
+        questionsAttemptedSet.clear();
+        document.getElementById('questionsInput').value = '';
+        document.getElementById('answersInput').value = '';
+        document.getElementById('inputContainer').classList.remove('hide');
+        document.getElementById('flashcard').style.display = 'none';
+        document.getElementById('saveButtonContainer').classList.add('hide');
+        document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('nextBtn').disabled = false;
+    }
+</script>
 
 </body>
 </html>
