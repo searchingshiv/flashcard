@@ -14,10 +14,9 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect('mongodb+srv://QQQQ:QQQQ@cluster0.1mfmnnf.mongodb.net/flashcardDB?retryWrites=true&w=majority', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
+// Updated MongoDB connection string
+mongoose.connect('mongodb+srv://wwww:wwww@cluster0.u2hhi.mongodb.net/flashcardDB?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
+
 
 // Flashcard Schema
 const flashcardSchema = new mongoose.Schema({
