@@ -274,7 +274,7 @@
             userId: '1234',
         };
 
-        fetch('http://localhost:5000/flashcards', {
+        fetch('/flashcards', { // Changed from http://localhost:5000 to relative path
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -286,9 +286,13 @@
             const shareButtonContainer = document.getElementById('saveButtonContainer');
             const linkContainer = document.getElementById('linkContainer');
 
+            // Use dynamic origin for the server URL
+            const serverUrl = window.location.origin;
+            const shareLink = `${serverUrl}/flashcards/view/${data.id}`;
+
             // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('http://localhost:5000/flashcards/view/${data.id}')">Share</button>`;
-            // linkContainer.innerHTML = `<p>Your flashcard set is saved! Share this link: <a href="http://localhost:5000/flashcards/view/${data.id}" target="_blank">http://localhost:5000/flashcards/view/${data.id}</a></p>`;
+            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${shareLink}')">Share</button>`;
+            // linkContainer.innerHTML = `<p>Your flashcard set is saved! Share this link: <a href="${shareLink}" target="_blank">${shareLink}</a></p>`;
         })
         .catch(error => {
             console.error('Error saving flashcard set:', error);
@@ -303,6 +307,7 @@
         });
     }
 </script>
+
 
 </body>
 </html>
