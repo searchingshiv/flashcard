@@ -177,35 +177,91 @@
     let attemptedQuestions = 0;
     let questionsAttemptedSet = new Set();
 
-    function generateFlashcards() {
-        const questionsInput = document.getElementById('questionsInput').value.trim();
-        const answersInput = document.getElementById('answersInput').value.trim();
+function generateFlashcards() {
+    const questionsInput = document.getElementById('questionsInput').value.trim();
+    const answersInput = document.getElementById('answersInput').value.trim();
 
-        if (!questionsInput || !answersInput) {
-            alert("Please enter both questions and answers.");
-            return;
-        }
-
-        questions = questionsInput.split('\n\n').map(q => q.trim());
-        answers = answersInput.split('\n\n').map(a => a.trim());
-
-        if (questions.length !== answers.length) {
-            alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
-            return;
-        }
-
-        currentFlashcardIndex = 0;
-        score = 0;
-        attemptedQuestions = 0;
-        questionsAttemptedSet.clear();
-        localStorage.clear(); // Clear any previous session data
-        updateFlashcard();
-        document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-        document.getElementById('prevBtn').disabled = true;
-        document.getElementById('inputContainer').classList.add('hide');
-        document.getElementById('flashcard').style.display = 'block';
-        document.getElementById('saveButtonContainer').classList.remove('hide');
+    if (!questionsInput || !answersInput) {
+        alert("Please enter both questions and answers.");
+        return;
     }
+
+    questions = questionsInput.split('\n\n').map(q => q.trim());
+    answers = answersInput.split('\n\n').map(a => a.trim());
+
+    if (questions.length !== answers.length) {
+        alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
+        return;
+    }
+
+    currentFlashcardIndex = 0;
+    score = 0;
+    attemptedQuestions = 0;
+    questionsAttemptedSet.clear();
+    localStorage.clear(); // Clear any previous session data
+    updateFlashcard();
+    document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('inputContainer').classList.add('hide');
+    document.getElementById('flashcard').style.display = 'block';
+    document.getElementById('saveButtonContainer').classList.remove('hide');
+    document.querySelector('.reset-button-container').classList.remove('hide'); // Show reset button
+}
+
+function updateFlashcard() {
+    const question = questions[currentFlashcardIndex];
+    const answer = answers[currentFlashcardIndex].split('. ')[1].trim();
+
+    const mainQuestion = question.split('\n')[0];
+    document.getElementById('flashcard-front').innerHTML = mainQuestion;
+
+    const optionsContainer = document.getElementById('options');
+    optionsContainer.innerHTML = '';
+
+    const options = question.split('\n').slice(1);
+    options.forEach(option => {
+        const button = document.createElement('button');
+        button.innerText = option;
+        button.onclick = () => checkAnswer(button, option[0] === answer);
+
+        // Check if this option was previously selected
+        const selectedOption = localStorage.getItem(`flashcard-${currentFlashcardIndex}`);
+        if (selectedOption === option) {
+            button.classList.add('correct');
+        }
+        optionsContainer.appendChild(button);
+    });
+
+    const flashcard = document.getElementById('flashcard');
+    flashcard.classList.remove('correct', 'incorrect');
+}
+
+function resetFlashcards() {
+    localStorage.clear();
+    questions = [];
+    answers = [];
+    currentFlashcardIndex = 0;
+    score = 0;
+    attemptedQuestions = 0;
+    questionsAttemptedSet.clear();
+    document.getElementById('questionsInput').value = '';
+    document.getElementById('answersInput').value = '';
+    document.getElementById('inputContainer').classList.remove('hide');
+    document.getElementById('flashcard').style.display = 'none';
+    document.getElementById('saveButtonContainer').classList.add('hide');
+    document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = false;
+    document.querySelector('.reset-button-container').classList.add('hide'); // Hide reset button
+}
+
+// Check if there's data in localStorage when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.length > 0) {
+        document.querySelector('.reset-button-container').classList.remove('hide');
+    }
+});
+
 
     function updateFlashcard() {
         const question = questions[currentFlashcardIndex];
