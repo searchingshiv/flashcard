@@ -1,5 +1,3 @@
-// server.js
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -14,9 +12,14 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-// Updated MongoDB connection string
-mongoose.connect('mongodb+srv://wwww:wwww@cluster0.u2hhi.mongodb.net/flashcardDB?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
-
+mongoose.connect('mongodb+srv://QQQQ:QQQQ@cluster0.1mfmnnf.mongodb.net/flashcardDB?retryWrites=true&w=majority', {
+    tls: true,
+    tlsAllowInvalidCertificates: true, // Use this if you are facing certificate issues
+}).then(() => {
+    console.log('Successfully connected to MongoDB');
+}).catch((error) => {
+    console.error('Error connecting to MongoDB:', error.message);
+});
 
 // Flashcard Schema
 const flashcardSchema = new mongoose.Schema({
@@ -38,29 +41,44 @@ app.get('/flashcards/view/:id', (req, res) => {
 
 // Create flashcard set
 app.post('/flashcards', async (req, res) => {
-    const { questions, answers, userId } = req.body;
-    const id = uuidv4();
-    const newFlashcardSet = new Flashcard({ id, questions, answers, userId });
-    await newFlashcardSet.save();
-    res.json({ id });
+    try {
+        const { questions, answers, userId } = req.body;
+        const id = uuidv4();
+        const newFlashcardSet = new Flashcard({ id, questions, answers, userId });
+        await newFlashcardSet.save();
+        res.json({ id });
+    } catch (error) {
+        console.error('Error creating flashcard set:', error);
+        res.status(500).json({ error: 'Failed to create flashcard set' });
+    }
 });
 
 // Get flashcard set by ID
 app.get('/flashcards/:id', async (req, res) => {
-    const { id } = req.params;
-    const flashcardSet = await Flashcard.findOne({ id });
-    if (flashcardSet) {
-        res.json(flashcardSet);
-    } else {
-        res.status(404).json({ error: 'Flashcard set not found' });
+    try {
+        const { id } = req.params;
+        const flashcardSet = await Flashcard.findOne({ id });
+        if (flashcardSet) {
+            res.json(flashcardSet);
+        } else {
+            res.status(404).json({ error: 'Flashcard set not found' });
+        }
+    } catch (error) {
+        console.error('Error fetching flashcard set:', error);
+        res.status(500).json({ error: 'Failed to fetch flashcard set' });
     }
 });
 
 // Get all flashcard sets for a user (optional)
 app.get('/user/:userId/flashcards', async (req, res) => {
-    const { userId } = req.params;
-    const flashcardSets = await Flashcard.find({ userId });
-    res.json(flashcardSets);
+    try {
+        const { userId } = req.params;
+        const flashcardSets = await Flashcard.find({ userId });
+        res.json(flashcardSets);
+    } catch (error) {
+        console.error('Error fetching user flashcard sets:', error);
+        res.status(500).json({ error: 'Failed to fetch user flashcard sets' });
+    }
 });
 
 // Start the server
