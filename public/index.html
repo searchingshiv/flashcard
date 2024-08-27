@@ -120,15 +120,13 @@
         .hide {
             display: none;
         }
-        .save-button-container {
+        .save-button-container, .reset-button-container {
             position: absolute;
             top: 20px;
             right: 20px;
         }
         .reset-button-container {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+            display: none;
         }
     </style>
 </head>
@@ -163,13 +161,10 @@
     <div id="saveButtonContainer" class="save-button-container hide">
         <button onclick="saveFlashcardSet()">Save</button>
     </div>
-    <div id="linkContainer"></div>
-    <div class="reset-button-container">
-        <button onclick="resetFlashcards()">Reset</button>
+    <div id="resetButtonContainer" class="reset-button-container">
+        <button onclick="resetOptions()">Reset</button>
     </div>
-</div>
-<div class="reset-button-container hide">
-    <button onclick="resetFlashcards()">Reset</button>
+    <div id="linkContainer"></div>
 </div>
 
 <script>
@@ -180,91 +175,37 @@
     let attemptedQuestions = 0;
     let questionsAttemptedSet = new Set();
 
-function generateFlashcards() {
-    const questionsInput = document.getElementById('questionsInput').value.trim();
-    const answersInput = document.getElementById('answersInput').value.trim();
+    function generateFlashcards() {
+        const questionsInput = document.getElementById('questionsInput').value.trim();
+        const answersInput = document.getElementById('answersInput').value.trim();
 
-    if (!questionsInput || !answersInput) {
-        alert("Please enter both questions and answers.");
-        return;
-    }
-
-    questions = questionsInput.split('\n\n').map(q => q.trim());
-    answers = answersInput.split('\n\n').map(a => a.trim());
-
-    if (questions.length !== answers.length) {
-        alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
-        return;
-    }
-
-    currentFlashcardIndex = 0;
-    score = 0;
-    attemptedQuestions = 0;
-    questionsAttemptedSet.clear();
-    localStorage.clear(); // Clear any previous session data
-    updateFlashcard();
-    document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-    document.getElementById('prevBtn').disabled = true;
-    document.getElementById('inputContainer').classList.add('hide');
-    document.getElementById('flashcard').style.display = 'block';
-    document.getElementById('saveButtonContainer').classList.remove('hide');
-    document.querySelector('.reset-button-container').classList.remove('hide'); // Show reset button
-}
-
-function updateFlashcard() {
-    const question = questions[currentFlashcardIndex];
-    const answer = answers[currentFlashcardIndex].split('. ')[1].trim();
-
-    const mainQuestion = question.split('\n')[0];
-    document.getElementById('flashcard-front').innerHTML = mainQuestion;
-
-    const optionsContainer = document.getElementById('options');
-    optionsContainer.innerHTML = '';
-
-    const options = question.split('\n').slice(1);
-    options.forEach(option => {
-        const button = document.createElement('button');
-        button.innerText = option;
-        button.onclick = () => checkAnswer(button, option[0] === answer);
-
-        // Check if this option was previously selected
-        const selectedOption = localStorage.getItem(`flashcard-${currentFlashcardIndex}`);
-        if (selectedOption === option) {
-            button.classList.add('correct');
+        if (!questionsInput || !answersInput) {
+            alert("Please enter both questions and answers.");
+            return;
         }
-        optionsContainer.appendChild(button);
-    });
 
-    const flashcard = document.getElementById('flashcard');
-    flashcard.classList.remove('correct', 'incorrect');
-}
+        questions = questionsInput.split('\n\n').map(q => q.trim());
+        answers = answersInput.split('\n\n').map(a => a.trim());
 
-function resetFlashcards() {
-    localStorage.clear();
-    questions = [];
-    answers = [];
-    currentFlashcardIndex = 0;
-    score = 0;
-    attemptedQuestions = 0;
-    questionsAttemptedSet.clear();
-    document.getElementById('questionsInput').value = '';
-    document.getElementById('answersInput').value = '';
-    document.getElementById('inputContainer').classList.remove('hide');
-    document.getElementById('flashcard').style.display = 'none';
-    document.getElementById('saveButtonContainer').classList.add('hide');
-    document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-    document.getElementById('prevBtn').disabled = true;
-    document.getElementById('nextBtn').disabled = false;
-    document.querySelector('.reset-button-container').classList.add('hide'); // Hide reset button
-}
+        if (questions.length !== answers.length) {
+            alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
+            return;
+        }
 
-// Check if there's data in localStorage when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.length > 0) {
-        document.querySelector('.reset-button-container').classList.remove('hide');
+        currentFlashcardIndex = 0;
+        score = 0;
+        attemptedQuestions = 0;
+        questionsAttemptedSet.clear();
+        updateFlashcard();
+        document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('inputContainer').classList.add('hide');
+        document.getElementById('flashcard').style.display = 'block';
+        document.getElementById('saveButtonContainer').classList.remove('hide');
+
+        // Check if options memory exists and show/hide reset button accordingly
+        updateResetButtonVisibility();
     }
-});
-
 
     function updateFlashcard() {
         const question = questions[currentFlashcardIndex];
@@ -378,23 +319,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function resetFlashcards() {
-        localStorage.clear();
-        questions = [];
-        answers = [];
-        currentFlashcardIndex = 0;
+    function resetOptions() {
+        // Check if there is any memory to reset
+        const keys = Object.keys(localStorage).filter(key => key.startsWith('flashcard-'));
+        if (keys.length === 0) {
+            alert("No options to reset.");
+            return;
+        }
+
+        // Clear only the options' memory for each flashcard
+        keys.forEach(key => localStorage.removeItem(key));
+
+        // Reset score and attempted questions
         score = 0;
         attemptedQuestions = 0;
         questionsAttemptedSet.clear();
-        document.getElementById('questionsInput').value = '';
-        document.getElementById('answersInput').value = '';
-        document.getElementById('inputContainer').classList.remove('hide');
-        document.getElementById('flashcard').style.display = 'none';
-        document.getElementById('saveButtonContainer').classList.add('hide');
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-        document.getElementById('prevBtn').disabled = true;
-        document.getElementById('nextBtn').disabled = false;
+
+        // Update the current flashcard
+        updateFlashcard();
+
+        // Hide the reset button if no options left
+        updateResetButtonVisibility();
     }
+
+    function updateResetButtonVisibility() {
+        const keys = Object.keys(localStorage).filter(key => key.startsWith('flashcard-'));
+        document.querySelector('.reset-button-container').style.display = keys.length ? 'block' : 'none';
+    }
+
+    // Initial check to hide/reset button if no options are set
+    updateResetButtonVisibility();
 </script>
 
 </body>
