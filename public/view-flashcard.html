@@ -212,16 +212,12 @@
         document.getElementById('flashcard-front').innerHTML = mainQuestion;
 
         const optionsContainer = document.getElementById('options');
-        optionsContainer.innerHTML = ''; // Clear previous options
+        optionsContainer.innerHTML = '';
 
         const options = question.split('\n').slice(1);
         options.forEach((option, index) => {
             const button = document.createElement('button');
             button.innerText = option;
-
-            // Reset button styles and states
-            button.classList.remove('correct', 'incorrect');
-            button.disabled = false;
 
             // Check if this option was previously selected by the user
             if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].selectedOption === option) {
@@ -233,7 +229,6 @@
             optionsContainer.appendChild(button);
         });
 
-        // Reset flashcard visual state
         const flashcard = document.getElementById('flashcard');
         flashcard.classList.remove('correct', 'incorrect');
         if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].isCorrect) {
@@ -274,11 +269,8 @@
             updateFlashcard();
             document.getElementById('prevBtn').disabled = false;
 
-            // Disable "Next" button if on the last flashcard
             if (currentFlashcardIndex === questions.length - 1) {
                 document.getElementById('nextBtn').disabled = true;
-            } else {
-                document.getElementById('nextBtn').disabled = false;
             }
         }
     }
@@ -289,31 +281,45 @@
             updateFlashcard();
             document.getElementById('nextBtn').disabled = false;
 
-            // Disable "Previous" button if on the first flashcard
             if (currentFlashcardIndex === 0) {
                 document.getElementById('prevBtn').disabled = true;
-            } else {
-                document.getElementById('prevBtn').disabled = false;
             }
         }
     }
 
     function saveFlashcardSet() {
-        const encodedQuestions = encodeURIComponent(document.getElementById('questionsInput').value.trim());
-        const encodedAnswers = encodeURIComponent(document.getElementById('answersInput').value.trim());
-        const flashcardSetLink = `${serverUrl}/flashcards.html?questions=${encodedQuestions}&answers=${encodedAnswers}`;
+        const flashcardData = {
+            questions: questions,
+            answers: answers
+        };
 
-        const linkElement = document.createElement('input');
-        linkElement.type = 'text';
-        linkElement.value = flashcardSetLink;
-        linkElement.readOnly = true;
-        linkElement.style.width = '100%';
-        document.getElementById('linkContainer').innerHTML = '';
-        document.getElementById('linkContainer').appendChild(linkElement);
+        fetch(`${serverUrl}/save-flashcards`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(flashcardData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            const linkContainer = document.getElementById('linkContainer');
+            const link = `${serverUrl}/flashcards/${data.fileId}`;
+            linkContainer.innerHTML = `
+                <p>Flashcards saved! Share this link: <a href="${link}" target="_blank">${link}</a></p>
+                <button onclick="copyToClipboard('${link}')">Copy to Clipboard</button>
+            `;
+        })
+        .catch(error => console.error('Error saving flashcards:', error));
+    }
 
-        linkElement.select();
+    function copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
         document.execCommand('copy');
-        alert('Flashcard set link copied to clipboard!');
+        document.body.removeChild(textarea);
+        alert('Link copied to clipboard!');
     }
 </script>
 
