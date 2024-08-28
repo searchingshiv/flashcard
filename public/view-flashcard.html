@@ -120,11 +120,6 @@
         .hide {
             display: none;
         }
-        .save-button-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-        }
         .negative-marking-toggle {
             margin: 10px 0;
             font-size: 16px;
@@ -167,9 +162,6 @@
     <div class="score hide" id="scoreContainer">
         <span id="score">Score: 0/0</span>
     </div>
-    <div id="saveButtonContainer" class="save-button-container hide">
-        <button onclick="saveFlashcardSet()">Save</button>
-    </div>
     <div id="linkContainer"></div>
 </div>
 
@@ -211,7 +203,6 @@
         document.getElementById('flashcard').style.display = 'block';
         document.getElementById('navigation').classList.remove('hide');
         document.getElementById('scoreContainer').classList.remove('hide');
-        document.getElementById('saveButtonContainer').classList.remove('hide');
     }
 
     function updateFlashcard() {
@@ -307,41 +298,6 @@
                 document.getElementById('prevBtn').disabled = true;
             }
         }
-    }
-
-    function saveFlashcardSet() {
-        const flashcardData = {
-            questions,
-            answers,
-            userId: '1234',
-        };
-
-        fetch(`${serverUrl}/flashcards`, {  // Use dynamic server URL
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(flashcardData),
-        })
-        .then(response => response.json())
-        .then(data => {
-            const shareButtonContainer = document.getElementById('saveButtonContainer');
-            const linkContainer = document.getElementById('linkContainer');
-
-            // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${serverUrl}/flashcards/view/${data.id}')">Share</button>`;
-        })
-        .catch(error => {
-            console.error('Error saving flashcard set:', error);
-        });
-    }
-
-    function copyToClipboard(link) {
-        navigator.clipboard.writeText(link).then(() => {
-            alert("Link copied to clipboard!");
-        }).catch(err => {
-            console.error('Failed to copy link: ', err);
-        });
     }
 </script>
 
