@@ -120,6 +120,11 @@
         .hide {
             display: none;
         }
+        .save-button-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
         .negative-marking-toggle {
             margin: 10px 0;
             font-size: 16px;
@@ -130,17 +135,6 @@
 
 <div class="container">
     <h1>MCQ Flashcards</h1>
-    <div id="inputContainer">
-        <textarea id="questionsInput" placeholder="Paste your questions here..."></textarea>
-        <textarea id="answersInput" placeholder="Paste your answers here..."></textarea>
-        <button onclick="generateFlashcards()">Generate Flashcards</button>
-        <div class="negative-marking-toggle">
-            <label>
-                <input type="checkbox" id="negativeMarkingToggle">
-                Enable Negative Marking
-            </label>
-        </div>
-    </div>
     <div id="flashcard" class="flashcard">
         <div class="flashcard-inner">
             <div class="flashcard-front" id="flashcard-front">
@@ -162,7 +156,16 @@
     <div class="score hide" id="scoreContainer">
         <span id="score">Score: 0/0</span>
     </div>
+    <div id="saveButtonContainer" class="save-button-container hide">
+        <button onclick="saveFlashcardSet()">Save</button>
+    </div>
     <div id="linkContainer"></div>
+    <div class="negative-marking-toggle">
+        <label>
+            <input type="checkbox" id="negativeMarkingToggle">
+            Enable Negative Marking
+        </label>
+    </div>
 </div>
 
 <script>
@@ -174,36 +177,6 @@
     let userSelections = {}; // Store user selections for each flashcard
 
     const serverUrl = window.location.origin; // Dynamically set the server URL
-
-    function generateFlashcards() {
-        const questionsInput = document.getElementById('questionsInput').value.trim();
-        const answersInput = document.getElementById('answersInput').value.trim();
-
-        if (!questionsInput || !answersInput) {
-            alert("Please enter both questions and answers.");
-            return;
-        }
-
-        questions = questionsInput.split('\n\n').map(q => q.trim());
-        answers = answersInput.split('\n\n').map(a => a.trim());
-
-        if (questions.length !== answers.length) {
-            alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
-            return;
-        }
-
-        currentFlashcardIndex = 0;
-        score = 0;
-        attemptedFlashcards.clear();
-        userSelections = {}; // Reset user selections
-        updateFlashcard();
-        document.getElementById('score').innerText = `Score: ${score}/${attemptedFlashcards.size}`;
-        document.getElementById('prevBtn').disabled = true;
-        document.getElementById('inputContainer').classList.add('hide');
-        document.getElementById('flashcard').style.display = 'block';
-        document.getElementById('navigation').classList.remove('hide');
-        document.getElementById('scoreContainer').classList.remove('hide');
-    }
 
     function updateFlashcard() {
         const question = questions[currentFlashcardIndex];
@@ -299,7 +272,55 @@
             }
         }
     }
-</script>
 
+    function saveFlashcardSet() {
+        const flashcardData = {
+            questions,
+            answers,
+            userId: '1234',
+        };
+
+        fetch(`${serverUrl}/flashcards`, {  // Use dynamic server URL
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(flashcardData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            const shareButtonContainer = document.getElementById('saveButtonContainer');
+            const linkContainer = document.getElementById('linkContainer');
+
+            // Change button to "Save and Share" with a link to the saved flashcard set
+            shareButtonContainer.innerHTML = `
+                <button onclick="window.location.href='${data.link}'">Save and Share</button>
+            `;
+            linkContainer.innerHTML = `Flashcard Set Link: <a href="${data.link}" target="_blank">${data.link}</a>`;
+        })
+        .catch(error => console.error('Error saving flashcard set:', error));
+    }
+
+    function initialize() {
+        // Load flashcard data here if needed
+        updateFlashcard();
+        document.getElementById('scoreContainer').classList.remove('hide');
+        document.getElementById('navigation').classList.remove('hide');
+        document.getElementById('saveButtonContainer').classList.remove('hide');
+    }
+
+    // Example initialization
+    // Replace these with your actual flashcard data
+    questions = [
+        "Question 1\nA. Option 1\nB. Option 2\nC. Option 3\nD. Option 4",
+        "Question 2\nA. Option 1\nB. Option 2\nC. Option 3\nD. Option 4"
+    ];
+    answers = [
+        "A. Option 1",
+        "B. Option 2"
+    ];
+
+    initialize();
+</script>
 </body>
 </html>
