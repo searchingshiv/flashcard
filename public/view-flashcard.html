@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Flashcards</title>
+    <title>View Flashcard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,9 +22,6 @@
             text-align: center;
             position: relative;
         }
-        h1 {
-            text-align: center;
-        }
         .flashcard {
             width: 100%;
             max-width: 800px;
@@ -36,7 +33,6 @@
             margin: 20px 0;
             position: relative;
             perspective: 1000px;
-            display: none;
         }
         .flashcard-inner {
             position: absolute;
@@ -95,12 +91,15 @@
             background-color: red !important;
             color: white;
         }
+        .hide {
+            display: none;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>View Flashcards</h1>
+    <h1>View Flashcard</h1>
     <div id="flashcard" class="flashcard">
         <div class="flashcard-inner">
             <div class="flashcard-front" id="flashcard-front">
@@ -125,47 +124,32 @@
 </div>
 
 <script>
-    let flashcards = [];
+    let questions = [];
+    let answers = [];
     let currentFlashcardIndex = 0;
     let score = 0;
     let attemptedQuestions = 0;
     let userSelections = {}; // Store user selections for each flashcard
 
-    const serverUrl = window.location.origin; // Dynamically set the server URL
-
-    window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const flashcardId = urlParams.get('id');
-        if (flashcardId) {
-            fetchFlashcards(flashcardId);
-        } else {
-            alert("Flashcard ID is missing in the URL.");
-        }
-    };
-
-    function fetchFlashcards(id) {
-        fetch(`${serverUrl}/flashcards/view/${id}`)
-        .then(response => response.json())
-        .then(data => {
-            flashcards = data.questions.map((question, index) => {
-                return {
-                    question: question,
-                    answer: data.answers[index]
-                };
+    document.addEventListener('DOMContentLoaded', () => {
+        const flashcardId = window.location.pathname.split('/').pop();
+        fetch(`/flashcards/${flashcardId}`)
+            .then(response => response.json())
+            .then(data => {
+                questions = data.questions;
+                answers = data.answers;
+                updateFlashcard();
+                document.getElementById('scoreContainer').classList.remove('hide');
+                document.getElementById('navigation').classList.remove('hide');
+            })
+            .catch(error => {
+                console.error('Error fetching flashcard set:', error);
             });
-            updateFlashcard();
-            document.getElementById('navigation').classList.remove('hide');
-            document.getElementById('scoreContainer').classList.remove('hide');
-        })
-        .catch(error => {
-            console.error('Error fetching flashcard data:', error);
-        });
-    }
+    });
 
     function updateFlashcard() {
-        const flashcard = flashcards[currentFlashcardIndex];
-        const question = flashcard.question;
-        const answer = flashcard.answer.split('. ')[1].trim();
+        const question = questions[currentFlashcardIndex];
+        const answer = answers[currentFlashcardIndex].split('. ')[1].trim();
 
         const mainQuestion = question.split('\n')[0];
         document.getElementById('flashcard-front').innerHTML = mainQuestion;
@@ -188,13 +172,11 @@
             optionsContainer.appendChild(button);
         });
 
-        const flashcardElement = document.getElementById('flashcard');
-        flashcardElement.classList.remove('correct', 'incorrect');
+        const flashcard = document.getElementById('flashcard');
+        flashcard.classList.remove('correct', 'incorrect');
         if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].isCorrect) {
-            flashcardElement.classList.add('correct');
+            flashcard.classList.add('correct');
         }
-
-        flashcardElement.style.display = 'block';
     }
 
     function checkAnswer(button, isCorrect, option) {
@@ -225,12 +207,12 @@
     }
 
     function nextFlashcard() {
-        if (currentFlashcardIndex < flashcards.length - 1) {
+        if (currentFlashcardIndex < questions.length - 1) {
             currentFlashcardIndex++;
             updateFlashcard();
             document.getElementById('prevBtn').disabled = false;
 
-            if (currentFlashcardIndex === flashcards.length - 1) {
+            if (currentFlashcardIndex === questions.length - 1) {
                 document.getElementById('nextBtn').disabled = true;
             }
         }
