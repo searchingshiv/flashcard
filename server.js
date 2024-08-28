@@ -52,15 +52,6 @@ app.post('/flashcards', async (req, res) => {
         res.status(500).json({ error: 'Failed to create flashcard set' });
     }
 });
-app.get('/flashcards/view/:id', async (req, res) => {
-    const flashcardId = req.params.id;
-    try {
-        const flashcardSet = await Flashcard.findById(flashcardId); // Fetch flashcard from MongoDB
-        res.json(flashcardSet);
-    } catch (error) {
-        res.status(500).json({ error: 'Error retrieving flashcard data.' });
-    }
-});
 
 // Get flashcard set by ID
 app.get('/flashcards/:id', async (req, res) => {
