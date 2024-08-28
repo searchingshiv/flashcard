@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCQ Flashcards - View</title>
     <style>
+        /* Common styling for both versions */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -50,7 +51,7 @@
             margin: 20px 0;
             position: relative;
             perspective: 1000px;
-            display: none;
+            display: none; /* Hidden by default */
         }
         .flashcard-inner {
             position: absolute;
@@ -146,9 +147,11 @@
     let score = 0;
     let attemptedQuestions = 0;
     let questionsAttemptedSet = new Set(); // To track attempted questions
+    let userSelections = {}; // Store user selections and correctness
 
     // Fetch flashcard data from the server
     function fetchFlashcardData() {
+        const urlParams = new URLSearchParams(window.location.search);
         const flashcardId = window.location.pathname.split('/').pop();
 
         fetch(`/flashcards/${flashcardId}`)
@@ -180,25 +183,44 @@
         options.forEach(option => {
             const button = document.createElement('button');
             button.innerText = option;
-            button.onclick = () => checkAnswer(button, option[0] === answer);
+
+            // Check if this option was previously selected by the user
+            if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].selectedOption === option) {
+                button.classList.add(userSelections[currentFlashcardIndex].isCorrect ? 'correct' : 'incorrect');
+                button.disabled = true;
+            }
+
+            button.onclick = () => checkAnswer(button, option[0] === answer, option);
             optionsContainer.appendChild(button);
         });
 
         // Reset the flashcard style
         const flashcard = document.getElementById('flashcard');
         flashcard.classList.remove('correct', 'incorrect');
+        if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].isCorrect) {
+            flashcard.classList.add('correct');
+        }
     }
 
-    function checkAnswer(button, isCorrect) {
-        if (!questionsAttemptedSet.has(currentFlashcardIndex)) {
+    function checkAnswer(button, isCorrect, option) {
+        if (!userSelections[currentFlashcardIndex]) {
             questionsAttemptedSet.add(currentFlashcardIndex);
             attemptedQuestions++;
         }
 
+        // Store user's selection and correctness
+        userSelections[currentFlashcardIndex] = {
+            selectedOption: option,
+            isCorrect: isCorrect
+        };
+
         if (isCorrect) {
             button.classList.add('correct');
             document.getElementById('flashcard').classList.add('correct');
-            score++;
+            if (!userSelections[currentFlashcardIndex].scored) {
+                score++;
+                userSelections[currentFlashcardIndex].scored = true; // Mark this question as scored
+            }
             disableOptions();
         } else {
             button.classList.add('incorrect');
