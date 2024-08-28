@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCQ Flashcards - View</title>
+    <title>MCQ Flashcards</title>
     <style>
-        /* Common styling for both versions */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -59,7 +58,7 @@
             margin: 20px 0;
             position: relative;
             perspective: 1000px;
-            display: none; /* Hidden by default */
+            display: none;
         }
         .flashcard-inner {
             position: absolute;
@@ -132,6 +131,11 @@
 
 <div class="container">
     <h1>MCQ Flashcards</h1>
+    <div id="inputContainer">
+        <textarea id="questionsInput" placeholder="Paste your questions here..."></textarea>
+        <textarea id="answersInput" placeholder="Paste your answers here..."></textarea>
+        <button onclick="generateFlashcards()">Generate Flashcards</button>
+    </div>
     <div id="flashcard" class="flashcard">
         <div class="flashcard-inner">
             <div class="flashcard-front" id="flashcard-front">
@@ -146,7 +150,6 @@
     <div class="options" id="options">
         <!-- Answer options will be generated here -->
     </div>
-    <!-- Add the navigation buttons and score display -->
     <div class="navigation hide" id="navigation">
         <button onclick="previousFlashcard()" id="prevBtn" disabled>Previous</button>
         <button onclick="nextFlashcard()" id="nextBtn">Next</button>
@@ -154,7 +157,6 @@
     <div class="score hide" id="scoreContainer">
         <span id="score">Score: 0/0</span>
     </div>
-    <!-- Add save button container for saving flashcard set -->
     <div id="saveButtonContainer" class="save-button-container hide">
         <button onclick="saveFlashcardSet()">Save</button>
     </div>
@@ -168,58 +170,86 @@
     let score = 0;
     let attemptedQuestions = 0;
     let userSelections = {}; // Store user selections for each flashcard
-    let questionsAttemptedSet = new Set(); // To track attempted questions
 
     const serverUrl = window.location.origin; // Dynamically set the server URL
 
-    // Fetch flashcard data from the server
-    function fetchFlashcardData() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const flashcardId = window.location.pathname.split('/').pop();
+    function generateFlashcards() {
+        const questionsInput = document.getElementById('questionsInput').value.trim();
+        const answersInput = document.getElementById('answersInput').value.trim();
 
-        fetch(`/flashcards/${flashcardId}`)
-            .then(response => response.json())
-            .then(data => {
-                questions = data.questions;
-                answers = data.answers;
-                document.getElementById('flashcard').style.display = 'block'; // Show flashcard
-                updateFlashcard();
-            })
-            .catch(error => {
-                console.error('Error fetching flashcard set:', error);
-            });
+        if (!questionsInput || !answersInput) {
+            alert("Please enter both questions and answers.");
+            return;
+        }
+
+        questions = questionsInput.split('\n\n').map(q => q.trim());
+        answers = answersInput.split('\n\n').map(a => a.trim());
+
+        if (questions.length !== answers.length) {
+            alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
+            return;
+        }
+
+        currentFlashcardIndex = 0;
+        score = 0;
+        attemptedQuestions = 0;
+        userSelections = {}; // Reset user selections
+        updateFlashcard();
+        document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('inputContainer').classList.add('hide');
+        document.getElementById('flashcard').style.display = 'block';
+        document.getElementById('navigation').classList.remove('hide');
+        document.getElementById('scoreContainer').classList.remove('hide');
+        document.getElementById('saveButtonContainer').classList.remove('hide');
     }
 
     function updateFlashcard() {
         const question = questions[currentFlashcardIndex];
-        const answer = answers[currentFlashcardIndex].split('. ')[1].trim(); // Get only the answer letter
+        const answer = answers[currentFlashcardIndex].split('. ')[1].trim();
 
-        // Extract and display the main question part
         const mainQuestion = question.split('\n')[0];
         document.getElementById('flashcard-front').innerHTML = mainQuestion;
 
         const optionsContainer = document.getElementById('options');
         optionsContainer.innerHTML = ''; // Clear previous options
 
-        // Generate options
-        const options = question.split('\n').slice(1); // Get the options part of the question
-        options.forEach(option => {
+        const options = question.split('\n').slice(1);
+        options.forEach((option, index) => {
             const button = document.createElement('button');
             button.innerText = option;
-            button.onclick = () => checkAnswer(button, option[0] === answer);
+
+            // Reset button styles and states
+            button.classList.remove('correct', 'incorrect');
+            button.disabled = false;
+
+            // Check if this option was previously selected by the user
+            if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].selectedOption === option) {
+                button.classList.add(userSelections[currentFlashcardIndex].isCorrect ? 'correct' : 'incorrect');
+                button.disabled = true;
+            }
+
+            button.onclick = () => checkAnswer(button, option[0] === answer, option);
             optionsContainer.appendChild(button);
         });
 
-        // Reset the flashcard style
+        // Reset flashcard visual state
         const flashcard = document.getElementById('flashcard');
         flashcard.classList.remove('correct', 'incorrect');
+        if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].isCorrect) {
+            flashcard.classList.add('correct');
+        }
     }
 
-    function checkAnswer(button, isCorrect) {
-        if (!questionsAttemptedSet.has(currentFlashcardIndex)) {
-            questionsAttemptedSet.add(currentFlashcardIndex);
+    function checkAnswer(button, isCorrect, option) {
+        if (!userSelections[currentFlashcardIndex]) {
             attemptedQuestions++;
         }
+
+        userSelections[currentFlashcardIndex] = {
+            selectedOption: option,
+            isCorrect: isCorrect
+        };
 
         if (isCorrect) {
             button.classList.add('correct');
@@ -242,10 +272,13 @@
         if (currentFlashcardIndex < questions.length - 1) {
             currentFlashcardIndex++;
             updateFlashcard();
-            document.getElementById('prevBtn').disabled = false; // Enable the previous button
+            document.getElementById('prevBtn').disabled = false;
 
+            // Disable "Next" button if on the last flashcard
             if (currentFlashcardIndex === questions.length - 1) {
-                document.getElementById('nextBtn').disabled = true; // Disable next button if it's the last card
+                document.getElementById('nextBtn').disabled = true;
+            } else {
+                document.getElementById('nextBtn').disabled = false;
             }
         }
     }
@@ -254,52 +287,34 @@
         if (currentFlashcardIndex > 0) {
             currentFlashcardIndex--;
             updateFlashcard();
-            document.getElementById('nextBtn').disabled = false; // Enable the next button
+            document.getElementById('nextBtn').disabled = false;
 
+            // Disable "Previous" button if on the first flashcard
             if (currentFlashcardIndex === 0) {
-                document.getElementById('prevBtn').disabled = true; // Disable previous button if it's the first card
+                document.getElementById('prevBtn').disabled = true;
+            } else {
+                document.getElementById('prevBtn').disabled = false;
             }
         }
     }
 
     function saveFlashcardSet() {
-        const flashcardData = {
-            questions,
-            answers,
-            userId: '1234', // Example user ID, replace with actual logic
-        };
+        const encodedQuestions = encodeURIComponent(document.getElementById('questionsInput').value.trim());
+        const encodedAnswers = encodeURIComponent(document.getElementById('answersInput').value.trim());
+        const flashcardSetLink = `${serverUrl}/flashcards.html?questions=${encodedQuestions}&answers=${encodedAnswers}`;
 
-        fetch(`${serverUrl}/flashcards`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(flashcardData),
-        })
-        .then(response => response.json())
-        .then(data => {
-            const shareButtonContainer = document.getElementById('saveButtonContainer');
-            const linkContainer = document.getElementById('linkContainer');
+        const linkElement = document.createElement('input');
+        linkElement.type = 'text';
+        linkElement.value = flashcardSetLink;
+        linkElement.readOnly = true;
+        linkElement.style.width = '100%';
+        document.getElementById('linkContainer').innerHTML = '';
+        document.getElementById('linkContainer').appendChild(linkElement);
 
-            // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${serverUrl}/flashcards/view/${data.id}')">Share</button>`;
-        })
-        .catch(error => {
-            console.error('Error saving flashcard set:', error);
-        });
+        linkElement.select();
+        document.execCommand('copy');
+        alert('Flashcard set link copied to clipboard!');
     }
-
-    function copyToClipboard(link) {
-        navigator.clipboard.writeText(link).then(() => {
-            alert("Link copied to clipboard!");
-        }).catch(err => {
-            console.error('Failed to copy link: ', err);
-        });
-    }
-
-    // Call fetchFlashcardData when the script loads
-    fetchFlashcardData();
-
 </script>
 
 </body>
