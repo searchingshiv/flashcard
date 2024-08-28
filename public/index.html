@@ -150,14 +150,11 @@
     <div class="options" id="options">
         <!-- Answer options will be generated here -->
     </div>
-    <div class="navigation hide" id="navigation">
+    <div class="navigation">
         <button onclick="previousFlashcard()" id="prevBtn" disabled>Previous</button>
         <button onclick="nextFlashcard()" id="nextBtn">Next</button>
     </div>
-    <div class="score hide" id="scoreContainer">
-        <span id="score">Score: 0/0</span>
-        <button onclick="resetOptions()" id="resetBtn" class="hide">Reset Options</button>
-    </div>
+    <div class="score" id="score">Score: 0/0</div>
     <div id="saveButtonContainer" class="save-button-container hide">
         <button onclick="saveFlashcardSet()">Save</button>
     </div>
@@ -198,10 +195,7 @@
         document.getElementById('prevBtn').disabled = true;
         document.getElementById('inputContainer').classList.add('hide');
         document.getElementById('flashcard').style.display = 'block';
-        document.getElementById('navigation').classList.remove('hide');
-        document.getElementById('scoreContainer').classList.remove('hide');
         document.getElementById('saveButtonContainer').classList.remove('hide');
-        toggleResetButton();
     }
 
     function updateFlashcard() {
@@ -242,7 +236,6 @@
         }
 
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-        toggleResetButton();
     }
 
     function disableOptions() {
@@ -281,7 +274,9 @@
             userId: '1234',
         };
 
-        fetch('http://localhost:5000/flashcards', {
+        const serverUrl = window.location.origin; // dynamically gets the server URL
+
+        fetch(`${serverUrl}/flashcards`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -292,9 +287,10 @@
         .then(data => {
             const shareButtonContainer = document.getElementById('saveButtonContainer');
             const linkContainer = document.getElementById('linkContainer');
+            
+            const shareLink = `${serverUrl}/flashcards/view/${data.id}`;
 
-            // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('http://localhost:5000/flashcards/view/${data.id}')">Share</button>`;
+            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${shareLink}')">Share</button>`;
         })
         .catch(error => {
             console.error('Error saving flashcard set:', error);
@@ -307,25 +303,6 @@
         }).catch(err => {
             console.error('Failed to copy link: ', err);
         });
-    }
-
-    function resetOptions() {
-        const optionsContainer = document.getElementById('options');
-        optionsContainer.innerHTML = ''; // Clear options
-        questionsAttemptedSet.clear(); // Clear set
-        score = 0;
-        attemptedQuestions = 0;
-        document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-        document.getElementById('resetBtn').classList.add('hide');
-    }
-
-    function toggleResetButton() {
-        const resetBtn = document.getElementById('resetBtn');
-        if (questionsAttemptedSet.size > 0) {
-            resetBtn.classList.remove('hide');
-        } else {
-            resetBtn.classList.add('hide');
-        }
     }
 </script>
 
