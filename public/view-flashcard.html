@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Flashcard</title>
+    <title>MCQ Flashcards - View</title>
     <style>
+        /* Common styling for both versions */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -20,7 +21,31 @@
             width: 100%;
             margin: 0 auto;
             text-align: center;
-            position: relative;
+        }
+        h1 {
+            text-align: center;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
         .flashcard {
             width: 100%;
@@ -33,6 +58,7 @@
             margin: 20px 0;
             position: relative;
             perspective: 1000px;
+            display: none; /* Hidden by default */
         }
         .flashcard-inner {
             position: absolute;
@@ -99,7 +125,7 @@
 <body>
 
 <div class="container">
-    <h1>View Flashcard</h1>
+    <h1>MCQ Flashcards</h1>
     <div id="flashcard" class="flashcard">
         <div class="flashcard-inner">
             <div class="flashcard-front" id="flashcard-front">
@@ -114,13 +140,11 @@
     <div class="options" id="options">
         <!-- Answer options will be generated here -->
     </div>
-    <div class="navigation hide" id="navigation">
+    <div class="navigation">
         <button onclick="previousFlashcard()" id="prevBtn" disabled>Previous</button>
         <button onclick="nextFlashcard()" id="nextBtn">Next</button>
     </div>
-    <div class="score hide" id="scoreContainer">
-        <span id="score">Score: 0/0</span>
-    </div>
+    <div class="score" id="score">Score: 0/0</div>
 </div>
 
 <script>
@@ -129,65 +153,56 @@
     let currentFlashcardIndex = 0;
     let score = 0;
     let attemptedQuestions = 0;
-    let userSelections = {}; // Store user selections for each flashcard
+    let questionsAttemptedSet = new Set(); // To track attempted questions
 
-    document.addEventListener('DOMContentLoaded', () => {
+    // Fetch flashcard data from the server
+    function fetchFlashcardData() {
+        const urlParams = new URLSearchParams(window.location.search);
         const flashcardId = window.location.pathname.split('/').pop();
+
         fetch(`/flashcards/${flashcardId}`)
             .then(response => response.json())
             .then(data => {
                 questions = data.questions;
                 answers = data.answers;
+                document.getElementById('flashcard').style.display = 'block'; // Show flashcard
                 updateFlashcard();
-                document.getElementById('scoreContainer').classList.remove('hide');
-                document.getElementById('navigation').classList.remove('hide');
             })
             .catch(error => {
                 console.error('Error fetching flashcard set:', error);
             });
-    });
+    }
 
     function updateFlashcard() {
         const question = questions[currentFlashcardIndex];
-        const answer = answers[currentFlashcardIndex].split('. ')[1].trim();
+        const answer = answers[currentFlashcardIndex].split('. ')[1].trim(); // Get only the answer letter
 
+        // Extract and display the main question part
         const mainQuestion = question.split('\n')[0];
         document.getElementById('flashcard-front').innerHTML = mainQuestion;
 
         const optionsContainer = document.getElementById('options');
-        optionsContainer.innerHTML = '';
+        optionsContainer.innerHTML = ''; // Clear previous options
 
-        const options = question.split('\n').slice(1);
-        options.forEach((option, index) => {
+        // Generate options
+        const options = question.split('\n').slice(1); // Get the options part of the question
+        options.forEach(option => {
             const button = document.createElement('button');
             button.innerText = option;
-
-            // Check if this option was previously selected by the user
-            if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].selectedOption === option) {
-                button.classList.add(userSelections[currentFlashcardIndex].isCorrect ? 'correct' : 'incorrect');
-                button.disabled = true;
-            }
-
-            button.onclick = () => checkAnswer(button, option[0] === answer, option);
+            button.onclick = () => checkAnswer(button, option[0] === answer);
             optionsContainer.appendChild(button);
         });
 
+        // Reset the flashcard style
         const flashcard = document.getElementById('flashcard');
         flashcard.classList.remove('correct', 'incorrect');
-        if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].isCorrect) {
-            flashcard.classList.add('correct');
-        }
     }
 
-    function checkAnswer(button, isCorrect, option) {
-        if (!userSelections[currentFlashcardIndex]) {
+    function checkAnswer(button, isCorrect) {
+        if (!questionsAttemptedSet.has(currentFlashcardIndex)) {
+            questionsAttemptedSet.add(currentFlashcardIndex);
             attemptedQuestions++;
         }
-
-        userSelections[currentFlashcardIndex] = {
-            selectedOption: option,
-            isCorrect: isCorrect
-        };
 
         if (isCorrect) {
             button.classList.add('correct');
@@ -210,10 +225,10 @@
         if (currentFlashcardIndex < questions.length - 1) {
             currentFlashcardIndex++;
             updateFlashcard();
-            document.getElementById('prevBtn').disabled = false;
+            document.getElementById('prevBtn').disabled = false; // Enable the previous button
 
             if (currentFlashcardIndex === questions.length - 1) {
-                document.getElementById('nextBtn').disabled = true;
+                document.getElementById('nextBtn').disabled = true; // Disable next button if it's the last card
             }
         }
     }
@@ -222,13 +237,16 @@
         if (currentFlashcardIndex > 0) {
             currentFlashcardIndex--;
             updateFlashcard();
-            document.getElementById('nextBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = false; // Enable the next button
 
             if (currentFlashcardIndex === 0) {
-                document.getElementById('prevBtn').disabled = true;
+                document.getElementById('prevBtn').disabled = true; // Disable previous button if it's the first card
             }
         }
     }
+
+    // Load the flashcard data when the page loads
+    window.onload = fetchFlashcardData;
 </script>
 
 </body>
