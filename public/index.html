@@ -120,13 +120,10 @@
         .hide {
             display: none;
         }
-        .save-button-container, .reset-button-container {
+        .save-button-container {
             position: absolute;
             top: 20px;
             right: 20px;
-        }
-        .reset-button-container {
-            display: none;
         }
     </style>
 </head>
@@ -153,16 +150,16 @@
     <div class="options" id="options">
         <!-- Answer options will be generated here -->
     </div>
-    <div class="navigation">
+    <div class="navigation hide" id="navigation">
         <button onclick="previousFlashcard()" id="prevBtn" disabled>Previous</button>
         <button onclick="nextFlashcard()" id="nextBtn">Next</button>
     </div>
-    <div class="score" id="score">Score: 0/0</div>
+    <div class="score hide" id="scoreContainer">
+        <span id="score">Score: 0/0</span>
+        <button onclick="resetOptions()" id="resetBtn" class="hide">Reset Options</button>
+    </div>
     <div id="saveButtonContainer" class="save-button-container hide">
         <button onclick="saveFlashcardSet()">Save</button>
-    </div>
-    <div id="resetButtonContainer" class="reset-button-container">
-        <button onclick="resetOptions()">Reset</button>
     </div>
     <div id="linkContainer"></div>
 </div>
@@ -201,10 +198,10 @@
         document.getElementById('prevBtn').disabled = true;
         document.getElementById('inputContainer').classList.add('hide');
         document.getElementById('flashcard').style.display = 'block';
+        document.getElementById('navigation').classList.remove('hide');
+        document.getElementById('scoreContainer').classList.remove('hide');
         document.getElementById('saveButtonContainer').classList.remove('hide');
-
-        // Check if options memory exists and show/hide reset button accordingly
-        updateResetButtonVisibility();
+        toggleResetButton();
     }
 
     function updateFlashcard() {
@@ -222,12 +219,6 @@
             const button = document.createElement('button');
             button.innerText = option;
             button.onclick = () => checkAnswer(button, option[0] === answer);
-
-            // Check if this option was previously selected
-            const selectedOption = localStorage.getItem(`flashcard-${currentFlashcardIndex}`);
-            if (selectedOption === option) {
-                button.classList.add('correct');
-            }
             optionsContainer.appendChild(button);
         });
 
@@ -245,13 +236,13 @@
             button.classList.add('correct');
             document.getElementById('flashcard').classList.add('correct');
             score++;
-            localStorage.setItem(`flashcard-${currentFlashcardIndex}`, button.innerText);
             disableOptions();
         } else {
             button.classList.add('incorrect');
         }
 
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
+        toggleResetButton();
     }
 
     function disableOptions() {
@@ -304,7 +295,6 @@
 
             // Change button to "Share" and add copy-to-clipboard functionality
             shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('http://localhost:5000/flashcards/view/${data.id}')">Share</button>`;
-            linkContainer.innerHTML = `<p>Your flashcard set is saved! Share this link: <a href="http://localhost:5000/flashcards/view/${data.id}" target="_blank">http://localhost:5000/flashcards/view/${data.id}</a></p>`;
         })
         .catch(error => {
             console.error('Error saving flashcard set:', error);
@@ -320,36 +310,23 @@
     }
 
     function resetOptions() {
-        // Check if there is any memory to reset
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('flashcard-'));
-        if (keys.length === 0) {
-            alert("No options to reset.");
-            return;
-        }
-
-        // Clear only the options' memory for each flashcard
-        keys.forEach(key => localStorage.removeItem(key));
-
-        // Reset score and attempted questions
+        const optionsContainer = document.getElementById('options');
+        optionsContainer.innerHTML = ''; // Clear options
+        questionsAttemptedSet.clear(); // Clear set
         score = 0;
         attemptedQuestions = 0;
-        questionsAttemptedSet.clear();
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-
-        // Update the current flashcard
-        updateFlashcard();
-
-        // Hide the reset button if no options left
-        updateResetButtonVisibility();
+        document.getElementById('resetBtn').classList.add('hide');
     }
 
-    function updateResetButtonVisibility() {
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('flashcard-'));
-        document.querySelector('.reset-button-container').style.display = keys.length ? 'block' : 'none';
+    function toggleResetButton() {
+        const resetBtn = document.getElementById('resetBtn');
+        if (questionsAttemptedSet.size > 0) {
+            resetBtn.classList.remove('hide');
+        } else {
+            resetBtn.classList.add('hide');
+        }
     }
-
-    // Initial check to hide/reset button if no options are set
-    updateResetButtonVisibility();
 </script>
 
 </body>
