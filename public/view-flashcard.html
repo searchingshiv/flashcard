@@ -21,6 +21,7 @@
             width: 100%;
             margin: 0 auto;
             text-align: center;
+            position: relative;
         }
         h1 {
             text-align: center;
@@ -120,6 +121,11 @@
         .hide {
             display: none;
         }
+        .save-button-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
@@ -140,11 +146,19 @@
     <div class="options" id="options">
         <!-- Answer options will be generated here -->
     </div>
-    <div class="navigation">
+    <!-- Add the navigation buttons and score display -->
+    <div class="navigation hide" id="navigation">
         <button onclick="previousFlashcard()" id="prevBtn" disabled>Previous</button>
         <button onclick="nextFlashcard()" id="nextBtn">Next</button>
     </div>
-    <div class="score" id="score">Score: 0/0</div>
+    <div class="score hide" id="scoreContainer">
+        <span id="score">Score: 0/0</span>
+    </div>
+    <!-- Add save button container for saving flashcard set -->
+    <div id="saveButtonContainer" class="save-button-container hide">
+        <button onclick="saveFlashcardSet()">Save</button>
+    </div>
+    <div id="linkContainer"></div>
 </div>
 
 <script>
@@ -153,7 +167,10 @@
     let currentFlashcardIndex = 0;
     let score = 0;
     let attemptedQuestions = 0;
+    let userSelections = {}; // Store user selections for each flashcard
     let questionsAttemptedSet = new Set(); // To track attempted questions
+
+    const serverUrl = window.location.origin; // Dynamically set the server URL
 
     // Fetch flashcard data from the server
     function fetchFlashcardData() {
@@ -245,8 +262,44 @@
         }
     }
 
-    // Load the flashcard data when the page loads
-    window.onload = fetchFlashcardData;
+    function saveFlashcardSet() {
+        const flashcardData = {
+            questions,
+            answers,
+            userId: '1234', // Example user ID, replace with actual logic
+        };
+
+        fetch(`${serverUrl}/flashcards`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(flashcardData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            const shareButtonContainer = document.getElementById('saveButtonContainer');
+            const linkContainer = document.getElementById('linkContainer');
+
+            // Change button to "Share" and add copy-to-clipboard functionality
+            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${serverUrl}/flashcards/view/${data.id}')">Share</button>`;
+        })
+        .catch(error => {
+            console.error('Error saving flashcard set:', error);
+        });
+    }
+
+    function copyToClipboard(link) {
+        navigator.clipboard.writeText(link).then(() => {
+            alert("Link copied to clipboard!");
+        }).catch(err => {
+            console.error('Failed to copy link: ', err);
+        });
+    }
+
+    // Call fetchFlashcardData when the script loads
+    fetchFlashcardData();
+
 </script>
 
 </body>
