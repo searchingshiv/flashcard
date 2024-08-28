@@ -288,16 +288,38 @@
     }
 
     function saveFlashcardSet() {
-        const questionsText = questions.join('\n\n');
-        const answersText = answers.join('\n\n');
-        const blob = new Blob([questionsText, '\n\n', answersText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
+        const flashcardData = {
+            questions,
+            answers,
+            userId: '1234',
+        };
 
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'flashcards.txt';
-        link.innerText = 'Download Flashcards';
-        document.getElementById('linkContainer').appendChild(link);
+        fetch(`${serverUrl}/flashcards`, {  // Use dynamic server URL
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(flashcardData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            const shareButtonContainer = document.getElementById('saveButtonContainer');
+            const linkContainer = document.getElementById('linkContainer');
+
+            // Change button to "Share" and add copy-to-clipboard functionality
+            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${serverUrl}/flashcards/view/${data.id}')">Share</button>`;
+        })
+        .catch(error => {
+            console.error('Error saving flashcard set:', error);
+        });
+    }
+
+    function copyToClipboard(link) {
+        navigator.clipboard.writeText(link).then(() => {
+            alert("Link copied to clipboard!");
+        }).catch(err => {
+            console.error('Failed to copy link: ', err);
+        });
     }
 </script>
 
