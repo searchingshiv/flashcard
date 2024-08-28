@@ -156,7 +156,6 @@
     </div>
     <div class="score hide" id="scoreContainer">
         <span id="score">Score: 0/0</span>
-        <button onclick="resetOptions()" id="resetBtn" class="hide">Reset Options</button>
     </div>
     <div id="saveButtonContainer" class="save-button-container hide">
         <button onclick="saveFlashcardSet()">Save</button>
@@ -170,7 +169,7 @@
     let currentFlashcardIndex = 0;
     let score = 0;
     let attemptedQuestions = 0;
-    let questionsAttemptedSet = new Set();
+    let userSelections = {}; // Store user selections for each flashcard
 
     const serverUrl = window.location.origin; // Dynamically set the server URL
 
@@ -194,7 +193,7 @@
         currentFlashcardIndex = 0;
         score = 0;
         attemptedQuestions = 0;
-        questionsAttemptedSet.clear();
+        userSelections = {}; // Reset user selections
         updateFlashcard();
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
         document.getElementById('prevBtn').disabled = true;
@@ -203,7 +202,6 @@
         document.getElementById('navigation').classList.remove('hide');
         document.getElementById('scoreContainer').classList.remove('hide');
         document.getElementById('saveButtonContainer').classList.remove('hide');
-        toggleResetButton();
     }
 
     function updateFlashcard() {
@@ -217,22 +215,36 @@
         optionsContainer.innerHTML = '';
 
         const options = question.split('\n').slice(1);
-        options.forEach(option => {
+        options.forEach((option, index) => {
             const button = document.createElement('button');
             button.innerText = option;
-            button.onclick = () => checkAnswer(button, option[0] === answer);
+
+            // Check if this option was previously selected by the user
+            if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].selectedOption === option) {
+                button.classList.add(userSelections[currentFlashcardIndex].isCorrect ? 'correct' : 'incorrect');
+                button.disabled = true;
+            }
+
+            button.onclick = () => checkAnswer(button, option[0] === answer, option);
             optionsContainer.appendChild(button);
         });
 
         const flashcard = document.getElementById('flashcard');
         flashcard.classList.remove('correct', 'incorrect');
+        if (userSelections[currentFlashcardIndex] && userSelections[currentFlashcardIndex].isCorrect) {
+            flashcard.classList.add('correct');
+        }
     }
 
-    function checkAnswer(button, isCorrect) {
-        if (!questionsAttemptedSet.has(currentFlashcardIndex)) {
-            questionsAttemptedSet.add(currentFlashcardIndex);
+    function checkAnswer(button, isCorrect, option) {
+        if (!userSelections[currentFlashcardIndex]) {
             attemptedQuestions++;
         }
+
+        userSelections[currentFlashcardIndex] = {
+            selectedOption: option,
+            isCorrect: isCorrect
+        };
 
         if (isCorrect) {
             button.classList.add('correct');
@@ -244,7 +256,6 @@
         }
 
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-        toggleResetButton();
     }
 
     function disableOptions() {
@@ -277,57 +288,16 @@
     }
 
     function saveFlashcardSet() {
-        const flashcardData = {
-            questions,
-            answers,
-            userId: '1234',
-        };
+        const questionsText = questions.join('\n\n');
+        const answersText = answers.join('\n\n');
+        const blob = new Blob([questionsText, '\n\n', answersText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
 
-        fetch(`${serverUrl}/flashcards`, {  // Use dynamic server URL
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(flashcardData),
-        })
-        .then(response => response.json())
-        .then(data => {
-            const shareButtonContainer = document.getElementById('saveButtonContainer');
-            const linkContainer = document.getElementById('linkContainer');
-
-            // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${serverUrl}/flashcards/view/${data.id}')">Share</button>`;
-        })
-        .catch(error => {
-            console.error('Error saving flashcard set:', error);
-        });
-    }
-
-    function copyToClipboard(link) {
-        navigator.clipboard.writeText(link).then(() => {
-            alert("Link copied to clipboard!");
-        }).catch(err => {
-            console.error('Failed to copy link: ', err);
-        });
-    }
-
-    function resetOptions() {
-        const optionsContainer = document.getElementById('options');
-        optionsContainer.innerHTML = ''; // Clear options
-        questionsAttemptedSet.clear(); // Clear set
-        score = 0;
-        attemptedQuestions = 0;
-        document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
-        document.getElementById('resetBtn').classList.add('hide');
-    }
-
-    function toggleResetButton() {
-        const resetBtn = document.getElementById('resetBtn');
-        if (questionsAttemptedSet.size > 0) {
-            resetBtn.classList.remove('hide');
-        } else {
-            resetBtn.classList.add('hide');
-        }
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'flashcards.txt';
+        link.innerText = 'Download Flashcards';
+        document.getElementById('linkContainer').appendChild(link);
     }
 </script>
 
