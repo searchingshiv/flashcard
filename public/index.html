@@ -174,16 +174,16 @@
     const serverUrl = window.location.origin; // Dynamically set the server URL
 
     function generateFlashcards() {
-        const questionsInput = document.getElementById('questionsInput').value.trim();
-        const answersInput = document.getElementById('answersInput').value.trim();
+        let questionsInput = document.getElementById('questionsInput').value;
+        let answersInput = document.getElementById('answersInput').value;
 
-        if (!questionsInput || !answersInput) {
-            alert("Please enter both questions and answers.");
-            return;
-        }
+        // Clean up the input: remove extra spaces and collapse multiple newlines into one
+        questionsInput = questionsInput.replace(/\s+/g, ' ').trim();
+        answersInput = answersInput.replace(/\s+/g, ' ').trim();
 
-        questions = questionsInput.split('\n\n').map(q => q.trim());
-        answers = answersInput.split('\n\n').map(a => a.trim());
+        // Split questions and answers by double newlines (or another chosen delimiter)
+        questions = questionsInput.split(/\n\s*\n/).map(q => q.trim());
+        answers = answersInput.split(/\n\s*\n/).map(a => a.trim());
 
         if (questions.length !== answers.length) {
             alert(`The number of questions (${questions.length}) and answers (${answers.length}) do not match.`);
@@ -194,6 +194,7 @@
         score = 0;
         attemptedQuestions = 0;
         userSelections = {}; // Reset user selections
+
         updateFlashcard();
         document.getElementById('score').innerText = `Score: ${score}/${attemptedQuestions}`;
         document.getElementById('prevBtn').disabled = true;
@@ -289,37 +290,31 @@
 
     function saveFlashcardSet() {
         const flashcardData = {
-            questions,
-            answers,
-            userId: '1234',
+            questions: questions,
+            answers: answers
         };
 
-        fetch(`${serverUrl}/flashcards`, {  // Use dynamic server URL
+        fetch(`${serverUrl}/save-flashcards`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify(flashcardData),
+            body: JSON.stringify(flashcardData)
         })
         .then(response => response.json())
         .then(data => {
-            const shareButtonContainer = document.getElementById('saveButtonContainer');
             const linkContainer = document.getElementById('linkContainer');
-
-            // Change button to "Share" and add copy-to-clipboard functionality
-            shareButtonContainer.innerHTML = `<button onclick="copyToClipboard('${serverUrl}/flashcards/view/${data.id}')">Share</button>`;
+            linkContainer.innerHTML = `<input type="text" value="${data.url}" id="flashcardLink" readonly>
+            <button onclick="copyToClipboard()">Copy Link</button>`;
         })
-        .catch(error => {
-            console.error('Error saving flashcard set:', error);
-        });
+        .catch(error => console.error('Error saving flashcards:', error));
     }
 
-    function copyToClipboard(link) {
-        navigator.clipboard.writeText(link).then(() => {
-            alert("Link copied to clipboard!");
-        }).catch(err => {
-            console.error('Failed to copy link: ', err);
-        });
+    function copyToClipboard() {
+        const flashcardLink = document.getElementById('flashcardLink');
+        flashcardLink.select();
+        document.execCommand('copy');
+        alert('Link copied to clipboard!');
     }
 </script>
 
